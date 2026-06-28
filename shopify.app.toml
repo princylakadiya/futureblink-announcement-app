@@ -2,7 +2,7 @@
 
 client_id = "dadbec824368ed7160aa412c561e57a3"
 name = "futureblink-announcement-app"
-application_url = "https://example.com"
+application_url = "https://your-actual-app.onrender.com"
 embedded = true
 
 [build]
@@ -21,11 +21,14 @@ api_version = "2026-07"
   topics = [ "app/uninstalled" ]
 
 [access_scopes]
-# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products,write_metaobjects,write_metaobject_definitions"
+scopes = "write_products,write_metaobjects,write_metaobject_definitions,write_metafields,read_metafields"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [
+  "https://your-actual-app.onrender.com/auth/callback",
+  "https://your-actual-app.onrender.com/auth/shopify/callback",
+  "https://your-actual-app.onrender.com/api/auth/callback"
+]
 
 [product.metafields.app.demo_info]
 type = "single_line_text_field"
