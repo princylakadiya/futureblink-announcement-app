@@ -1,4 +1,4 @@
-import { useFetcher } from "react-router";
+import { useFetcher, useLoaderData } from "react-router";
 import type { ActionFunctionArgs, HeadersFunction, LoaderFunctionArgs } from "react-router";
 import { useState } from "react";
 import { authenticate } from "../shopify.server";
@@ -8,31 +8,27 @@ import Announcement from "../models/Announcement.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
-  return null;
+  await connectMongo();
+  const history = await Announcement.find()
+    .sort({ createdAt: -1 })
+    .limit(10)
+    .lean();
+  return { history };
 };
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    // ✅ Destructure admin from authenticate
     const { admin } = await authenticate.admin(request);
     await connectMongo();
-
     const formData = await request.formData();
     const announcement = formData.get("announcement") as string;
-
     if (!announcement?.trim()) {
       return { success: false, error: "Announcement text is required." };
     }
-
-    // Save to MongoDB
     await Announcement.create({ announcement });
-
-    // Get shop ID
     const shopRes = await admin.graphql(`{ shop { id } }`);
     const shopData = await shopRes.json();
     const shopId = shopData.data.shop.id;
-
-    // Save to Shopify metafield so theme liquid can read it
     await admin.graphql(
       `#graphql
       mutation metafieldsSet($metafields: [MetafieldsSetInput!]!) {
@@ -54,7 +50,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         },
       }
     );
-
     return { success: true };
   } catch (err) {
     console.error("Action error:", err);
@@ -63,6 +58,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function Index() {
+  const { history } = useLoaderData<typeof loader>();
   const fetcher = useFetcher<{ success: boolean; error?: string }>();
   const [announcement, setAnnouncement] = useState("");
   const isSubmitting = fetcher.state === "submitting";
@@ -80,26 +76,20 @@ export default function Index() {
 
         <div style={styles.card}>
           {fetcher.data?.success && (
-            <div style={styles.successBanner}>
-              ✓ &nbsp; Announcement saved & live on your store!
-            </div>
+            <div style={styles.successBanner}>✓ &nbsp; Announcement saved & live!</div>
           )}
           {fetcher.data?.success === false && (
-            <div style={styles.errorBanner}>
-              ✕ &nbsp; {fetcher.data.error || "Something went wrong."}
-            </div>
+            <div style={styles.errorBanner}>✕ &nbsp; {fetcher.data.error}</div>
           )}
-
           <label htmlFor="announcement-text" style={styles.label}>
             Announcement Text
           </label>
-
           <textarea
             id="announcement-text"
             value={announcement}
             onChange={(e) => setAnnouncement(e.target.value)}
             placeholder="Enter announcement... e.g. Sale 50% Off"
-            rows={5}
+            rows={4}
             style={styles.textarea}
             onFocus={(e) => {
               e.currentTarget.style.borderColor = "#005bd3";
@@ -110,7 +100,6 @@ export default function Index() {
               e.currentTarget.style.boxShadow = "none";
             }}
           />
-
           <button
             onClick={handleSave}
             disabled={isSubmitting || !announcement.trim()}
@@ -130,6 +119,40 @@ export default function Index() {
             {isSubmitting ? "Saving…" : "Save"}
           </button>
         </div>
+
+        <div style={{ marginTop: "32px" }}>
+          <h2 style={styles.sectionTitle}>Announcement History</h2>
+          <div style={styles.card}>
+            {history.length === 0 ? (
+              <p style={styles.emptyText}>No announcements yet.</p>
+            ) : (
+              <table style={styles.table}>
+                <thead>
+                  <tr>
+                    <th style={styles.th}>#</th>
+                    <th style={styles.th}>Announcement</th>
+                    <th style={styles.th}>Saved At</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {history.map((item: any, i: number) => (
+                    <tr key={i} style={{ backgroundColor: i % 2 === 0 ? "#fafafa" : "#fff" }}>
+                      <td style={styles.td}>{i + 1}</td>
+                      <td style={styles.td}>{item.announcement}</td>
+                      <td style={styles.td}>
+                        {new Date(item.createdAt).toLocaleString("en-IN", {
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+
       </div>
     </div>
   );
@@ -151,7 +174,6 @@ const styles: Record<string, React.CSSProperties> = {
     fontWeight: "700",
     color: "#1a1a1a",
     margin: "0 0 20px 0",
-    letterSpacing: "-0.3px",
   },
   card: {
     backgroundColor: "#ffffff",
@@ -217,6 +239,37 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: "8px",
     transition: "background-color 0.15s ease",
     minWidth: "90px",
+  },
+  sectionTitle: {
+    fontSize: "18px",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    margin: "0 0 12px 0",
+  },
+  emptyText: {
+    fontSize: "14px",
+    color: "#888",
+    margin: 0,
+    textAlign: "center" as const,
+    padding: "16px 0",
+  },
+  table: {
+    width: "100%",
+    borderCollapse: "collapse" as const,
+    fontSize: "14px",
+  },
+  th: {
+    textAlign: "left" as const,
+    padding: "10px 12px",
+    borderBottom: "2px solid #e1e3e5",
+    fontWeight: "600",
+    color: "#1a1a1a",
+    backgroundColor: "#f9f9f9",
+  },
+  td: {
+    padding: "10px 12px",
+    borderBottom: "1px solid #f0f0f0",
+    color: "#444",
   },
 };
 
