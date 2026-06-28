@@ -13,18 +13,28 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
 
 export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    const { admin, session } = await authenticate.admin(request);
+    const { admin } = await authenticate.admin(request);
 
     await connectMongo();
 
     const formData = await request.formData();
     const announcement = formData.get("announcement") as string;
 
-    // Step 1: MongoDB mein save karo
+    // MongoDB save
     await Announcement.create({ announcement });
-    console.log("✅ MongoDB mein save hua");
 
-    // Step 2: Shopify Metafield mein save karo
+    // Pehle Shop ID lo
+    const shopResponse = await admin.graphql(`
+      query {
+        shop {
+          id
+        }
+      }
+    `);
+    const shopData = await shopResponse.json();
+    const shopId = shopData.data.shop.id;
+
+    // Metafield save
     const response = await admin.graphql(`
       mutation MetafieldsSet($metafields: [MetafieldsSetInput!]!) {
         metafieldsSet(metafields: $metafields) {
@@ -48,22 +58,21 @@ export const action = async ({ request }: ActionFunctionArgs) => {
             key: "announcement",
             value: announcement,
             type: "single_line_text_field",
-            ownerId: `gid://shopify/Shop/${session.shop.replace('.myshopify.com', '')}`,
+            ownerId: shopId,
           }
         ]
       }
     });
 
     const data = await response.json();
-    console.log("✅ Metafield save hua:", JSON.stringify(data));
+    console.log("Metafield response:", JSON.stringify(data));
 
     return { success: true };
   } catch (err) {
-    console.error("❌ Error:", err);
+    console.error("Error:", err);
     return { success: false, error: String(err) };
   }
 };
-
 export default function Index() {
   const fetcher = useFetcher();
   const [announcement, setAnnouncement] = useState("");
@@ -85,11 +94,11 @@ export default function Index() {
       <button
         onClick={() => fetcher.submit({ announcement }, { method: "POST" })}
         disabled={fetcher.state === "submitting"}
-        style={{ 
-          padding: "10px 24px", 
-          background: "#008060", 
-          color: "white", 
-          border: "none", 
+        style={{
+          padding: "10px 24px",
+          background: "#008060",
+          color: "white",
+          border: "none",
           cursor: "pointer",
           fontSize: "16px",
           borderRadius: "4px"
