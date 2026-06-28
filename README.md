@@ -85,5 +85,5 @@ Check MONGODB_URI in .env and whitelist your IP in MongoDB Atlas Network Access
 ## Submission
 
 - GitHub: https://github.com/princylakadiya/futureblink-announcement-app
-- Demo Video: [Loom link here]
-- Deployed URL: [Render/Fly.io URL here]
+- Demo Video: https://youtu.be/kuEoo945bpM
+- Deployed URL: https://futureblink-announcement-app.onrender.com
