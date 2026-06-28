@@ -58,7 +58,46 @@ export async function loader({ request }) {
 
   return nodes;
 }
-```
+```# Futureblink Announcement App
+
+A Shopify app that allows merchants to create announcements that appear on their storefront.
+
+## Features
+- Create announcements from Shopify Admin
+- Saves to MongoDB (audit history)
+- Syncs to Shopify Shop Metafields
+- Displays on storefront via Theme App Extension
+
+## Tech Stack
+- React + Vite (Frontend)
+- Node.js + React Router (Backend)
+- MongoDB (Database)
+- Shopify Admin GraphQL API
+
+## How to Run
+
+### Prerequisites
+- Node.js v20+
+- MongoDB Atlas account
+- Shopify Partner account
+
+### Setup
+1. Clone the repo:
+   git clone https://github.com/princylakadiya/futureblink-announcement-app.git
+   cd futureblink-announcement-app
+
+2. Install dependencies:
+   npm install
+
+3. Create .env file:
+   SHOPIFY_API_KEY=your_api_key
+   SHOPIFY_API_SECRET=your_api_secret
+   SHOPIFY_APP_URL=your_app_url
+   MONGODB_URI=your_mongodb_uri
+   SCOPES=write_products,write_metafields,read_metafields,write_metaobjects
+
+4. Run the app:
+   shopify app dev
 
 This template comes pre-configured with examples of:
 
